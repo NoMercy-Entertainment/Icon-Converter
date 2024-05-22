@@ -1,0 +1,36 @@
+{
+	"compilerOptions": {
+		"target": "ES6",
+		"declaration": true,
+		"outDir": "./dist",
+		"strict": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"downlevelIteration": true,
+		"allowJs": false,
+		"module": "NodeNext",
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"importHelpers": true,
+		"moduleDetection": "force",
+		"noImplicitAny": true,
+		"sourceMap": true,
+		"moduleResolution": "NodeNext",
+		"resolveJsonModule": true,
+		"noErrorTruncation": true,
+		"emitDeclarationOnly": false,
+		"declarationMap": true,
+		"lib": ["DOM", "ES6", "DOM.Iterable", "ScriptHost", "ES2016.Array.Include", "ESNext", "ES2015", "ES5"],
+		"baseUrl": "./",
+		"types": [],
+	},
+	"ts-node": {
+		"swc": false,
+	},
+	"exclude": ["node_modules"],
+	"include": [
+		"./package.json", 
+		"src/iconConverter.ts",
+	],
+	"references": []
+}
