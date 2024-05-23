@@ -4,6 +4,7 @@ import { resolve } from 'path';
 import ProgressBar from 'progress';
 import { Command } from 'commander';
 import packageJson from '../package.json';
+import { optimize } from 'svgo';
 
 declare module 'commander' {
     interface Command {
@@ -167,6 +168,13 @@ function addColor(str: string) {
         .replace(/stroke="#\w+"/g, `stroke="${options.stroke || "$&"}"`)
         .replace(/fill="#\w+"/g, `fill="${options.stroke || "$&"}"`)
 
+    if (str.match(/stroke="none"/g)?.length ?? 0 == 0) {
+        str = str.replace(/stroke="[\w\d\s\.#;:\(\)_-]+"/g, `stroke="${options.stroke || "$&"}"`)
+    }
+    if (str.match(/fill="none"/g)?.length ?? 0 == 0) {
+        str = str.replace(/fill="[\w\d\s\.#;:\(\)_-]+"/g, `fill="${options.stroke || "$&"}"`)
+    }
+
     if (options.forceStroke && options.stroke)
         str = str.replace(/stroke="none"/g, `stroke="${options.stroke}"`)
 
@@ -177,7 +185,7 @@ function addColor(str: string) {
 }
 
 function removeStyles(str: string) {
-    return str.replace(/style="[\w\d\s\.#;:\(\)_-]+"\s/g, '')
+    return str.replace(/style="[\w\d\s\.#;:\(\)_-]+"\s?/g, '')
 }
 
 function removeSize(str: string) {
@@ -239,6 +247,7 @@ function makeFileName(file: string, at = -1): string {
 
     // remove all spaces, dashes and dots and make it camelCase make it camelCase
     const newFile = file
+        .toLocaleLowerCase()
         .split('\\').at(at)!
         .split('.').at(0)!
         .split('-')
@@ -268,11 +277,11 @@ function makeIconName(file: string): string {
     
     if (duplicateNames(files).includes(name)){
 
-        const newName = name.charAt(0).toUpperCase() + name.slice(1);
+        const newName = name;
 
         const folderName = makeFileName(file, -2);
 
-        name = newName + folderName;
+        name = newName + folderName.charAt(0).toUpperCase() + folderName.slice(1);
 
         renamedIcons.push({
             input: file,
@@ -304,13 +313,49 @@ function processIcons(){
         total: files.length
     });
 
-    for (const file of files.reverse()) {
+    for (const file of files) {
 
         let name: string = makeIconName(file);
     
         name = replaceNumbersWithWords(name);
-    
-        let fileContents = readFileSync(file, 'utf8');
+
+        const iconOutputFile = resolve(iconOutput, `${name}.svg`);
+            
+        const result = optimize(readFileSync(file, 'utf8'), {
+            multipass: true,
+            plugins: [
+                'cleanupAttrs',
+                'cleanupListOfValues',
+                'cleanupNumericValues',
+                'collapseGroups',
+                'convertPathData',
+                'convertShapeToPath',
+                'convertTransform',
+                'mergePaths',
+                'removeComments',
+                'removeDesc',
+                'removeDimensions',
+                'removeDoctype',
+                'removeEditorsNSData',
+                'removeEmptyAttrs',
+                'removeEmptyContainers',
+                'removeEmptyText',
+                'removeHiddenElems',
+                'removeMetadata',
+                'removeNonInheritableGroupAttrs',
+                'removeRasterImages',
+                'removeScriptElement',
+                'removeTitle',
+                'removeUnknownsAndDefaults',
+                'removeUselessDefs',
+                'removeXMLProcInst',
+                'sortAttrs',
+                'moveElemsAttrsToGroup',
+                'removeUselessStrokeAndFill',
+            ],
+        });
+        
+        let fileContents = result.data;
 
         if (options.id)
             fileContents = addId(fileContents, name);
@@ -327,10 +372,10 @@ function processIcons(){
         sprite.push(spritize(fileContents));
     
         if (options.icons){
-            writeFileSync(`${iconOutput}/${name}.svg`, fileContents, 'utf8');
+            writeFileSync(iconOutputFile, fileContents, 'utf8');
         }
 
-        if (!exampleName) exampleName = name;
+        exampleName = name;
         
         bar.tick(1);
     }
