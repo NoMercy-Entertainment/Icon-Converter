@@ -29,11 +29,10 @@ interface Options {
     optimize: boolean;
     output: string;
     input: string;
+    list: boolean;
 }
 
 const optimalOptions: Partial<Options> = {
-    sprite: true,
-    icons: true,
     stroke: 'currentColor',
     fill: 'currentColor',
     id: true,
@@ -58,6 +57,7 @@ const defaultOptions: Partial<Options> = {
     forceStroke: false,
     forceFill: false,
     optimize: false,
+    list: false,
 }
 
 const program = new Command();
@@ -73,7 +73,8 @@ program
     .option('--debug', "Show all log messages", defaultOptions.debug)
     .option('--optimize', "Loads optimal options", false)
     .option('--sprite', "Generates a sprite.svg file with all icons.", defaultOptions.sprite)
-    .option('--icons', "Generates individual icon files.", defaultOptions.icons)
+    .option('--list', "Generates a list.json file with all icon names to make looping over all easy.", false)
+    .option('--icons', "Generates individual icon files.", false)
 
     .option('--fill <fill>', "default fill color", defaultOptions.fill)
     .option('--id', "Adds an id to each icon.", defaultOptions.id)
@@ -103,6 +104,7 @@ if (options.optimize) {
         debug: program.opts().debug,
         sprite: program.opts().sprite,
         icons: program.opts().icons,
+        list: program.opts().list,
     };
 }
 
@@ -168,10 +170,11 @@ function addColor(str: string) {
         .replace(/stroke="#\w+"/g, `stroke="${options.stroke || "$&"}"`)
         .replace(/fill="#\w+"/g, `fill="${options.stroke || "$&"}"`)
 
-    if (str.match(/stroke="none"/g)?.length ?? 0 == 0) {
+    if (!str.match(/stroke="none"/g)?.length) {
         str = str.replace(/stroke="[\w\d\s\.#;:\(\)_-]+"/g, `stroke="${options.stroke || "$&"}"`)
     }
-    if (str.match(/fill="none"/g)?.length ?? 0 == 0) {
+    
+    if (!str.match(/fill="none"/g)?.length) {
         str = str.replace(/fill="[\w\d\s\.#;:\(\)_-]+"/g, `fill="${options.stroke || "$&"}"`)
     }
 
@@ -291,7 +294,6 @@ function makeIconName(file: string): string {
 
     return name;
 }
-
 function processIcons(){
 
     const output = resolve(program.opts().output as string);
@@ -299,6 +301,7 @@ function processIcons(){
     
     cleanOutput(output, iconOutput);
 
+    const iconNames: string[] = [];
     const sprite: string[] = [];
 
     sprite.push('<svg width="0" height="0" style="display: none;">\n');
@@ -318,6 +321,8 @@ function processIcons(){
         let name: string = makeIconName(file);
     
         name = replaceNumbersWithWords(name);
+    
+        iconNames.push(name);
 
         const iconOutputFile = resolve(iconOutput, `${name}.svg`);
             
@@ -379,11 +384,12 @@ function processIcons(){
         
         bar.tick(1);
     }
-
+    
     sprite.push('\n</svg>');
 
     const spriteFile = resolve(output, 'sprite.svg');
     const spriteUseExampleFile = resolve(output, 'use-example.html');
+    const iconsListFile = resolve(output, 'list.json');
     
     if (options.sprite){
 
@@ -400,6 +406,10 @@ function processIcons(){
         writeFileSync(spriteUseExampleFile, spriteUseExample, 'utf8');
     }
 
+    if (options.list){
+        writeFileSync(iconsListFile, JSON.stringify(iconNames));
+    }
+
     console.log();
     console.log('Output:', output);
     console.log();
@@ -407,6 +417,10 @@ function processIcons(){
     if (options.sprite){
         console.log('Sprite:', spriteFile);
         console.log('Sprite use example:', spriteUseExampleFile);
+    }
+
+    if (options.list){
+        console.log('List:', iconsListFile);
     }
     console.log('');
 
